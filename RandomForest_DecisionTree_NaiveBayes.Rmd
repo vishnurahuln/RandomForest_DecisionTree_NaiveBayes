@@ -1,0 +1,221 @@
+---
+author: "Vishnu Rahul"
+output: pdf_document
+---
+
+```{r load-packages, include=FALSE}
+library("tidyverse")
+library("randomForest")
+library("e1071")
+library("rpart")
+library("farff")
+library("caret")
+library("farff")
+library("ROSE")
+options(warn = -1)
+```
+
+```{r fileimport, include=FALSE}
+
+Train <-readARFF("~/Downloads/Training Dataset.arff")
+Test.csv <- (readARFF("~/Downloads/old.arff"))
+summary(Test.csv)
+Test.csv <- sapply(Test.csv, as.character.factor)
+Test.csv <- as.data.frame(Test.csv)
+
+# convert 0 to -1 on the test data to match training data
+Test.csv$Prefix_Suffix <- as.factor(ifelse(Test.csv$Prefix_Suffix==0, 1,Test.csv$Prefix_Suffix))
+Test.csv$age_of_domain <- as.factor(ifelse(Test.csv$age_of_domain==0, 1,Test.csv$age_of_domain))
+Test.csv$Page_Rank <- as.factor(ifelse(Test.csv$Page_Rank==0, 1,Test.csv$Page_Rank))
+Test.csv$Domain_registeration_length <- as.factor(ifelse(Test.csv$Domain_registeration_length==0, 1,Test.csv$Domain_registeration_length))
+
+
+# convert 1 to -1 and 0 to 1 on the test data to match training data
+Test.csv$having_IP_Address <- as.factor(ifelse(Test.csv$having_IP_Address==1, -1,ifelse(Test.csv$having_IP_Address==0,1,Test.csv$having_IP_Address)))
+Test.csv$Shortining_Service <- as.factor(ifelse(Test.csv$Shortining_Service==1, -1,ifelse(Test.csv$Shortining_Service==0,1,Test.csv$Shortining_Service)))
+Test.csv$having_At_Symbol <- as.factor(ifelse(Test.csv$having_At_Symbol==1, -1,ifelse(Test.csv$having_At_Symbol==0,1,Test.csv$having_At_Symbol)))
+Test.csv$double_slash_redirecting <- as.factor(ifelse(Test.csv$double_slash_redirecting==1, -1,ifelse(Test.csv$double_slash_redirecting==0,1,Test.csv$double_slash_redirecting)))
+Test.csv$Favicon <- as.factor(ifelse(Test.csv$Favicon==1, -1,ifelse(Test.csv$Favicon==0,1,Test.csv$Favicon)))
+Test.csv$port <- as.factor(ifelse(Test.csv$port==1, -1,ifelse(Test.csv$port==0,1,Test.csv$port)))
+Test.csv$HTTPS_token <- as.factor(ifelse(Test.csv$HTTPS_token==1, -1,ifelse(Test.csv$HTTPS_token==0,1,Test.csv$HTTPS_token)))
+Test.csv$Abnormal_URL <- as.factor(ifelse(Test.csv$Abnormal_URL==1, -1,ifelse(Test.csv$Abnormal_URL==0,1,Test.csv$Abnormal_URL)))
+Test.csv$Submitting_to_email <- as.factor(ifelse(Test.csv$Submitting_to_email==1, -1,ifelse(Test.csv$Submitting_to_email==0,1,Test.csv$Submitting_to_email)))
+Test.csv$on_mouseover <- as.factor(ifelse(Test.csv$on_mouseover==1, -1,ifelse(Test.csv$on_mouseover==0,1,Test.csv$on_mouseover)))
+Test.csv$RightClick <- as.factor(ifelse(Test.csv$RightClick==1, -1,ifelse(Test.csv$RightClick==0,1,Test.csv$RightClick)))
+Test.csv$popUpWidnow <- as.factor(ifelse(Test.csv$popUpWidnow==1, -1,ifelse(Test.csv$popUpWidnow==0,1,Test.csv$popUpWidnow)))
+Test.csv$Iframe <- as.factor(ifelse(Test.csv$Iframe==1, -1,ifelse(Test.csv$Iframe==0,1,Test.csv$Iframe)))
+Test.csv$DNSRecord <- as.factor(ifelse(Test.csv$DNSRecord==1, -1,ifelse(Test.csv$DNSRecord==0,1,Test.csv$DNSRecord)))
+Test.csv$Google_Index <- as.factor(ifelse(Test.csv$Google_Index==1, -1,ifelse(Test.csv$Google_Index==0,1,Test.csv$Google_Index)))
+Test.csv$Statistical_report <- as.factor(ifelse(Test.csv$Statistical_report==1, -1,ifelse(Test.csv$Statistical_report==0,1,Test.csv$Statistical_report)))
+Test.csv$Result <- as.factor(ifelse(Test.csv$Result==1, -1,ifelse(Test.csv$Result==-1,1,Test.csv$Result)))
+
+# converting all variables into a factor to match training dataset
+Test.csv$having_IP_Address <- as.factor(Test.csv$having_IP_Address)
+Test.csv$URL_Length <- as.factor(Test.csv$URL_Length)
+Test.csv$Shortining_Service <- as.factor(Test.csv$Shortining_Service)
+Test.csv$having_At_Symbol <- as.factor(Test.csv$having_At_Symbol)
+Test.csv$double_slash_redirecting <- as.factor(Test.csv$double_slash_redirecting)
+Test.csv$Prefix_Suffix <- as.factor(Test.csv$Prefix_Suffix)
+Test.csv$having_Sub_Domain <- as.factor(Test.csv$having_Sub_Domain)
+Test.csv$SSLfinal_State <- as.factor(Test.csv$SSLfinal_State)
+Test.csv$Domain_registeration_length <- as.factor(Test.csv$Domain_registeration_length)
+Test.csv$Favicon <- as.factor(Test.csv$Favicon)
+Test.csv$port <- as.factor(Test.csv$port)
+Test.csv$HTTPS_token <- as.factor(Test.csv$HTTPS_token)
+Test.csv$Request_URL <- as.factor(Test.csv$Request_URL)
+Test.csv$URL_of_Anchor <- as.factor(Test.csv$URL_of_Anchor)
+Test.csv$Links_in_tags <- as.factor(Test.csv$Links_in_tags)
+Test.csv$SFH <- as.factor(Test.csv$SFH)
+Test.csv$Submitting_to_email <- as.factor(Test.csv$Submitting_to_email)
+Test.csv$Abnormal_URL <- as.factor(Test.csv$Abnormal_URL)
+Test.csv$Redirect <- as.factor(Test.csv$Redirect)
+Test.csv$on_mouseover <- as.factor(Test.csv$on_mouseover)
+Test.csv$RightClick <- as.factor(Test.csv$RightClick)
+Test.csv$popUpWidnow <- as.factor(Test.csv$popUpWidnow)
+Test.csv$Iframe <- as.factor(Test.csv$Iframe)
+Test.csv$age_of_domain <- as.factor(Test.csv$age_of_domain)
+Test.csv$DNSRecord <- as.factor(Test.csv$DNSRecord)
+Test.csv$web_traffic <- as.factor(Test.csv$web_traffic)
+Test.csv$Page_Rank <- as.factor(Test.csv$Page_Rank)
+Test.csv$Google_Index <- as.factor(Test.csv$Google_Index)
+Test.csv$Links_pointing_to_page <- as.factor(Test.csv$Links_pointing_to_page)
+Test.csv$Statistical_report <- as.factor(Test.csv$Statistical_report)
+Test.csv$Result <- as.factor(Test.csv$Result)
+
+
+Test <- Test.csv
+```
+
+#Combine Data And Perform OverSampling to Balance the data 
+
+```{r combineData, include=TRUE}
+combined <- rbind(Train,Test)
+summary(combined$Result) #Unbalanced data
+combined.data <- ovun.sample(Result ~., combined, "over", N = 15040)$data # Performing Over Sampling
+summary(combined.data$Result) #Balanced data
+```
+#Randomize the dataset due to Oversampling
+```{r Randomize, include=TRUE}
+set.seed(123)
+rows <- sample(nrow(combined.data))
+combined.data <- combined.data[rows,]
+```
+# Check for missing values
+
+```{r cleandata, include=TRUE}
+any_is_na = apply(combined, 2, function(x) any(is.na(x)))
+sum(any_is_na)
+```
+# Construct a decision tree, a naive bayes, and a random forest model
+# Use cross-validation to check the performance of your models
+
+```{r CrossValidation, include=TRUE}
+
+k<-10
+nmethod <- 5
+folds <- cut(seq(1,nrow(combined.data)),breaks=k,labels=FALSE)
+models.err <- matrix(-1,k,nmethod-2,dimnames=list(paste0("Fold", 1:k), c("rf","dt","naiveBayes")))
+measure.model.dt <- matrix(-1,k,nmethod,dimnames=list(paste0("Fold", 1:k), c("accur","recall","specificity","False Alarm", "AUC")))
+measure.model.rf <- matrix(-1,k,nmethod,dimnames=list(paste0("Fold", 1:k), c("accur","recall","specificity","False Alarm", "AUC")))
+measure.model.nb <- matrix(-1,k,nmethod,dimnames=list(paste0("Fold", 1:k), c("accur","recall","specificity","False Alarm", "AUC")))
+
+
+my.measure <- function(actual, prediction)
+{
+  y <- as.vector(table(prediction,actual))
+  names(y) <- c("TN","FP","FN","TP")
+  acur <- (y["TN"]+y["TP"])/sum(y)
+  TPR <- (y["TP"])/(y["TP"]+y["FN"])
+  TNR <- (y["TN"])/(y["TN"]+y["FP"])
+  FPR <- (y["FP"])/(y["TN"]+y["FP"])
+  FNR <- (y["FN"])/(y["FN"]+y["TP"])
+  rv1 <- c(acur, TPR, TNR, FPR,FNR)
+  return(rv1)
+}
+
+for(i in 1:k)
+{
+   testIndexes <- which(folds==i, arr.ind=TRUE) 
+  testData <- combined.data[testIndexes, ]
+  trainData <- combined.data[-testIndexes, ]
+  
+  rf <- randomForest(Result ~ ., data = trainData,
+                     ntree = 100,
+                     oob.prox=FALSE,
+                     mtry = sqrt(ncol(trainData) - 1))
+  predictedrf <- predict(rf, newdata = testData, type = "class")
+  predictedrf1 <- predict(rf, newdata = testData, type = "prob")[,1]
+  aucrf <- auc(testData$Result, predictedrf1)
+  models.err[i,1] <- mean(testData$Result != predictedrf)*100
+  measure.model.rf[i,"accur"] <- my.measure(testData$Result,predictedrf)[1]
+  measure.model.rf[i,"recall"] <- my.measure(testData$Result,predictedrf)[2]
+  measure.model.rf[i,"specificity"] <- my.measure(testData$Result,predictedrf)[3]
+  measure.model.rf[i,"False Alarm"] <- my.measure(testData$Result,predictedrf)[4]
+  measure.model.rf[i,"AUC"] <- aucrf
+  
+  dt <- rpart(Result ~ ., data = trainData, parms = list(split = "information")
+              ,control=rpart.control(minsplit = 0, minbucket = 0, cp=-1))
+  predicteddt <- predict(dt, newdata = testData,type="class")
+  predicteddt1 <- predict(dt, newdata = testData, type = "prob")[,1]
+  aucdt <- auc(testData$Result, predicteddt1)
+  models.err[i,2] <- mean(testData$Result != predicteddt)*100
+  measure.model.dt[i,"accur"] <- my.measure(testData$Result,predicteddt)[1]
+  measure.model.dt[i,"recall"] <- my.measure(testData$Result,predicteddt)[2]
+  measure.model.dt[i,"specificity"] <- my.measure(testData$Result,predicteddt)[3]
+  measure.model.dt[i,"False Alarm"] <- my.measure(testData$Result,predicteddt)[4]
+  measure.model.dt[i,"AUC"] <- aucdt
+  
+  nb <- naiveBayes(Result ~ ., trainData)
+  predictednb <- predict(nb, newdata = testData,type="class")
+  predictednb1 <- predict(nb, newdata = testData, type = "raw")[,1]
+  aucnb <- auc(testData$Result, predictednb1)
+  models.err[i,3] <-mean(testData$Result != predictednb)*100
+  measure.model.nb[i,"accur"] <- my.measure(testData$Result,predictednb)[1]
+  measure.model.nb[i,"recall"] <- my.measure(testData$Result,predictednb)[2]
+  measure.model.nb[i,"specificity"] <- my.measure(testData$Result,predictednb)[3]
+  measure.model.nb[i,"False Alarm"] <- my.measure(testData$Result,predictednb)[4]
+  measure.model.nb[i,"AUC"] <- aucnb
+}
+```
+
+# Calculate the mean of Accuracy, Recall, Specificity and False Alarm for three models
+
+```{r choose the best model based on Evaluation Metrics, include=TRUE}
+Final <- matrix(c(mean(measure.model.dt[,"accur"]), 
+                  mean(measure.model.rf[,"accur"]), 
+                  mean(measure.model.nb[,"accur"]),
+                  mean(measure.model.dt[,"recall"]), 
+                  mean(measure.model.rf[,"recall"]), 
+                  mean(measure.model.nb[,"recall"]),
+                  mean(measure.model.dt[,"specificity"]),
+                  mean(measure.model.rf[,"specificity"]),
+                  mean(measure.model.nb[,"specificity"]),
+                  mean(measure.model.dt[,"False Alarm"]),
+                  mean(measure.model.rf[,"False Alarm"]),
+                  mean(measure.model.nb[,"False Alarm"]),
+                  mean(measure.model.dt[,"AUC"]),
+                  mean(measure.model.rf[,"AUC"]),
+                  mean(measure.model.nb[,"AUC"])),ncol = 3,byrow=TRUE)
+colnames(Final) <- c("DecisionTree","RandomForest","NaiveBayes")
+rownames(Final) <- c("Accuracy","Recall","Specificity","FalseAlarm","AUC")
+Final <- as.table(Final)
+knitr::kable(Final)
+```
+
+## Choose the best model - Explanation
+
+```{choose the best model - Explanation, include=TRUE}
+# Which model will be chosen as your final model? What evaluation measure(s) do you use to select the best model? Justify your answer.
+
+* Accuracy is the most popular classification measure, which is used to show the percentage of websites that are correctly classified. 
+* Recall is the number of phishing websites correctly classified as phishing divided by the total phishing websites. 
+* Specificity is the number of legitimate websites correctly classified as legitimate out of total legitimate websites. 
+* False Alarm is the number of legitimate websites misclassified as phishing divided by the total legitimate websites. 
+* False Negative rate is the number of phishing websites misclassified as legitimate divided by the total phishing websites.
+
+For better performance in detecting Phishing websites, the model should achieve high Accuracy, Recall, and Specificity, and
+produce low False Alarm and FNR.
+
+Decision tree model appears to be the most appropriate model for detecting Phishing Website as it achieves highest values for Accuracy, Recall, and Specificity compared to RandomForest and Naive Bayes model. DecisionTree also has Low False Alarm compared to Random Forest. It unarguably provides efficient and credible means of maximizing the detection of compromised and malicious URLs
+
+```
